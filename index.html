@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<!-- three.js library -->
+<script src='js/three.js'></script>
+<script src="js/ColladaLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
+<!-- jsartookit -->
+<script src="js/artoolkit.min.js"></script>
+<script src="js/artoolkit.api.js"></script>
+<!-- include threex.artoolkit -->
+<script src="js/threex-artoolkitsource.js"></script>
+<script src="js/threex-artoolkitcontext.js"></script>
+<script src="js/threex-arbasecontrols.js"></script>
+<script src="js/threex-armarkercontrols.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+<script>
+    THREEx.ArToolkitContext.baseURL = ''
+
+</script>
+<style>
+    body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding 0;
+        overflow: hidden;
+        font-family: 'Raleway', sans-serif;
+    }
+    
+    #preloader {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: #44d4ff;
+        z-index: 200;
+    }
+    
+    #loading {
+        text-align: center;
+        height: 360px;
+        width: 360px;
+        color: #fff;
+        margin: auto;
+        position: relative;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 3em;
+    }
+    
+    #header {
+        position: absolute;
+        width: 100%;
+        z-index: 100;
+        text-align: center;
+    }
+    
+    #badge {
+        margin-top: 8px;
+        max-width: 400px;
+    }
+    
+    @media only screen and (max-width: 1024px) {
+        #badge {
+            max-width: 200px;
+        }
+    }
+
+</style>
+
+<body>
+    <container id="preloader">
+        <div id="loading">
+            <p>Loading,
+                <br>Please Wait</p>
+            <img src="img/loader.gif">
+        </div>
+    </container>
+    <div id="header">
+        <img src="img/logo.png" id="badge">
+    </div>
+    <script>
+        //////////////////////////////////////////////////////////////////////////////////
+        //		Init
+        //////////////////////////////////////////////////////////////////////////////////
+
+        var model1, model2, model3, count = 0,
+            particles, particleCount, particleSystem;
+
+        var loader = new THREE.ColladaLoader();
+        loader.load('landscape1.dae', function(collada) {
+
+            model1 = collada.scene;
+            model1.scale.x = model1.scale.y = model1.scale.z = 0.015;
+
+            model2 = model1.clone();
+            model3 = model1.clone();
+
+            var cloud1 = model1.getObjectByName("Cloud", true);
+            cloud1 = cloud1.children[0];
+            console.log(cloud1);
+
+            new TWEEN.Tween(cloud1.position).to({
+                x: 0,
+                y: 30,
+                z: -15
+            }, 8000).repeat(Infinity).easing(TWEEN.Easing.Quadratic.InOut).start();
+
+            cloud1.scale.x = cloud1.scale.y = cloud1.scale.z = 0.0;
+            new TWEEN.Tween(cloud1.scale).to({
+                x: 1,
+                y: 1,
+                z: 1
+            }, 8000).repeat(Infinity).easing(TWEEN.Easing.Quadratic.InOut).start();
+
+            var cloud2 = model2.getObjectByName("Cloud", true);
+            cloud2 = cloud2.children[0];
+            cloud2.position.set(0, 30, -15);
+
+            new TWEEN.Tween(cloud2.position).to({
+                x: 0,
+                y: 50,
+                z: -145
+            }, 12000).repeat(Infinity).easing(TWEEN.Easing.Quadratic.InOut).start();
+
+            var textureLoader = new THREE.TextureLoader();
+            particleCount = 1500;
+            particles = new THREE.Geometry();
+            var pMaterial = new THREE.PointsMaterial({
+                color: 0x3a4e5d,
+                size: 0.05,
+                map: textureLoader.load("img/rain.png"),
+                phaTest: 0.3,
+                opacity: 0.9,
+                transparent: true
+            });
+
+            for (var i = 0; i < particleCount; i++) {
+
+                var pX = Math.random() * 60 - 30,
+                    pY = Math.random() * -10,
+                    pZ = Math.random() * 20 - 10;
+                var particle = new THREE.Vector3(pX, pY, pZ);
+                particle.velocity = new THREE.Vector3(0, -(Math.random() * 0.9), 0);
+
+                particles.vertices.push(particle);
+
+            }
+
+            particleSystem = new THREE.Points(particles, pMaterial);
+
+            particleSystem.sortParticles = true;
+            cloud2.add(particleSystem);
+
+            var cloud3 = model3.getObjectByName("Cloud", true);
+            cloud3 = cloud3.children[0];
+            cloud3.position.set(0, 50, -145);
+
+            var river = model3.getObjectByName("river", true);
+            river = river.children[0];
+
+            new TWEEN.Tween(river.position).to({
+                y: 3
+            }, 8000).repeat(Infinity).easing(TWEEN.Easing.Quadratic.InOut).start();
+
+            //everything is preloaded set it all up!
+            init();
+
+        });
+
+
+
+        function init() {
+            // init renderer
+            var renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true
+            });
+            renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+            renderer.setSize(640, 480);
+            renderer.domElement.style.position = 'absolute'
+            renderer.domElement.style.top = '0px'
+            renderer.domElement.style.left = '0px'
+            document.body.appendChild(renderer.domElement);
+
+            // array of functions for the rendering loop
+            var onRenderFcts = [];
+
+            // init scene and camera
+            var scene = new THREE.Scene();
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		Initialize a basic camera
+            //////////////////////////////////////////////////////////////////////////////////
+
+            // Create a camera
+            var camera = new THREE.Camera();
+            scene.add(camera);
+            var light = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
+            //scene.add(light);
+
+            ////////////////////////////////////////////////////////////////////////////////
+            //          handle arToolkitSource
+            ////////////////////////////////////////////////////////////////////////////////
+
+            var arToolkitSource = new THREEx.ArToolkitSource({
+                sourceType: 'webcam'
+            });
+            arToolkitSource.init(function onReady() {
+                onResize()
+            });
+
+            // handle resize
+            window.addEventListener('resize', function() {
+                onResize()
+            });
+
+            function onResize() {
+                arToolkitSource.onResize()
+                arToolkitSource.copySizeTo(renderer.domElement)
+                if (arToolkitContext.arController !== null) {
+                    arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)
+                }
+            }
+
+            ////////////////////////////////////////////////////////////////////////////////
+            //          initialize arToolkitContext
+            ////////////////////////////////////////////////////////////////////////////////	
+
+            // create atToolkitContext
+            var arToolkitContext = new THREEx.ArToolkitContext({
+                    cameraParametersUrl: THREEx.ArToolkitContext.baseURL + 'data/camera_para.dat',
+                    detectionMode: 'mono',
+                })
+                // initialize it
+            arToolkitContext.init(function onCompleted() {
+                // copy projection matrix to camera
+                camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+            })
+
+            // update artoolkit on every frame
+            onRenderFcts.push(function() {
+                if (arToolkitSource.ready === false) return
+                arToolkitContext.update(arToolkitSource.domElement)
+            })
+
+
+            ////////////////////////////////////////////////////////////////////////////////
+            //          Create a ArMarkerControls
+            ////////////////////////////////////////////////////////////////////////////////
+
+            var markerRoot = new THREE.Group;
+            scene.add(markerRoot);
+            var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+                type: 'pattern',
+                patternUrl: THREEx.ArToolkitContext.baseURL + 'data/pattern-1.patt',
+            });
+
+
+            var markerRoot2 = new THREE.Group;
+            scene.add(markerRoot2);
+            var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot2, {
+                type: 'pattern',
+                patternUrl: THREEx.ArToolkitContext.baseURL + 'data/pattern-2.patt',
+            });
+
+            var markerRoot3 = new THREE.Group; scene.add(markerRoot3); var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot3, { type: 'pattern', patternUrl: THREEx.ArToolkitContext.baseURL + 'data/pattern-3.patt', });
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		add an object in the scene
+            //////////////////////////////////////////////////////////////////////////////////
+
+            markerRoot.add(model1);
+            markerRoot2.add(model2);
+            markerRoot3.add(model3);
+
+            onRenderFcts.push(function() {
+                for (var i = 0; i < particleCount; i++) {
+
+                    var ptcl = particles.vertices[i];
+                    //check if it's below the ground and reset
+                    if (ptcl.y < -100) {
+                        ptcl.y = -10;
+                        ptcl.velocity.y = -(Math.random() * 0.9);
+                    }
+
+                    ptcl.velocity.y -= Math.random() * 0.02;
+
+                    ptcl.add(ptcl.velocity);
+
+                }
+                particles.verticesNeedUpdate = true;
+            });
+
+            
+
+            document.getElementById("preloader").style.visibility = 'hidden';
+
+
+            //////////////////////////////////////////////////////////////////////////////////
+            //		render the whole thing on the page
+            //////////////////////////////////////////////////////////////////////////////////
+
+            // render the scene
+            onRenderFcts.push(function() {
+                renderer.render(scene, camera);
+            })
+
+            // run the rendering loop
+            var lastTimeMsec = null
+            requestAnimationFrame(function animate(nowMsec) {
+                // keep looping
+                requestAnimationFrame(animate);
+                // measure time
+                lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
+                var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+                lastTimeMsec = nowMsec;
+                TWEEN.update();
+                // call each update function
+                onRenderFcts.forEach(function(onRenderFct) {
+                    onRenderFct(deltaMsec / 1000, nowMsec / 1000);
+                })
+            });
+        }
+
+    </script>
+</body>
